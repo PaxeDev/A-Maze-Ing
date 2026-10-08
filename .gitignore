@@ -1,7 +1,9 @@
-/CopyLogs
+.gitlab-ci.yml
+CopyLogs/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
+*.py[cod]
 *$py.class
 
 # C extensions
@@ -26,6 +28,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.DS_Store
+Thumbs.db
 
 # PyInstaller
 #   Usually these files are written by a python script from a template
@@ -154,6 +158,7 @@ activemq-data/
 .venv
 env/
 venv/
+.venv/
 ENV/
 env.bak/
 venv.bak/

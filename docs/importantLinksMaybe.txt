@@ -1,0 +1,4 @@
+https://opensource.guide/legal/#which-ohttps://opensource.guide/legal/#which-open-source-license-is-appropriate-for-my-project
+https://peps.python.org/pep-0257/
+https://en.wikipedia.org/wiki/Maze_generation_algorithm
+https://docs.astral.sh/uv/
