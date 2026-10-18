@@ -1,17 +1,21 @@
 import curses
-from mazegen.core import BaseMazeGenerator
+from mazegen import MazeGenerator
 
 
 class CursesViewer:
-    """
-    Handles the interactive terminal visualization of the maze using curses.
+    """Handles the interactive terminal visualization of the maze using curses.
 
     Attributes:
-        maze (Any): The maze generator containing the grid and configuration.
-        show_path (bool): Determining if the solution path should be rendered.
+        maze (MazeGenerator): The maze generator containing the grid logic.
+        show_path (bool): Flag determining if the solution path is rendered.
         color_idx (int): Current color palette index for rendering walls.
-        UNICODE_WALLS (tuple[str, ...]): Mapping of bitwise values (0-15)
-        to Unicode box-drawing characters.
+        COLOR_PATTERN (int): Color pair ID for the 42 pattern.
+        COLOR_PATH (int): Color pair ID for the shortest path route.
+        COLOR_WALL_1 (int): Color pair ID for the primary wall style.
+        COLOR_WALL_2 (int): Color pair ID for the secondary wall style.
+        COLOR_WALL_3 (int): Color pair ID for the tertiary wall style.
+        COLOR_ENTRY (int): Color pair ID for the entry cell background.
+        COLOR_EXIT (int): Color pair ID for the exit cell background.
     """
     COLOR_PATTERN = 1
     COLOR_PATH = 2
@@ -21,25 +25,32 @@ class CursesViewer:
     COLOR_ENTRY = 6
     COLOR_EXIT = 7
 
-    def __init__(self, maze_generator: BaseMazeGenerator) -> None:
-        """
-        Initializes the CursesViewer with a generated maze.
+    def __init__(self, maze_generator: MazeGenerator) -> None:
+        """Initializes the CursesViewer with a generated maze.
 
         Args:
-            maze_generator (Any): An instance of the maze generator containing
-                the parsed configuration and the internal grid state.
+            maze_generator (MazeGenerator): An instance of the public
+            maze generator.
         """
         self.maze = maze_generator
         self.show_path = True
         self.color_idx = 3
 
     def _get_pillar_char(self, px: int, py: int) -> str:
+        """Calculates the precise Unicode character for a wall intersection.
+
+        Inspects the logical walls of the surrounding cells to select the
+        correct Unicode box-drawing character.
+
+        Args:
+            px (int): The x-coordinate (column) of the pillar.
+            py (int): The y-coordinate (row) of the pillar.
+
+        Returns:
+            str: A single Unicode character representing the intersection.
         """
-        Calculates the precise Unicode character for an intersection (pillar)
-        by inspecting the logical walls of the surrounding cells.
-        """
-        w = self.maze.config.WIDTH
-        h = self.maze.config.HEIGHT
+        w = self.maze.width
+        h = self.maze.height
         grid = self.maze.grid
 
         up = down = left = right = False
@@ -83,13 +94,10 @@ class CursesViewer:
         return UNICODE_PILLARS[idx]
 
     def draw_ui(self, stdscr: 'curses.window') -> None:
-        """
-        Draws the maze grid using Unicode box-drawing characters,
-        along with the interactive menu to the hidden buffer.
+        """Draws the expanded maze grid and the interactive menu.
 
         Args:
-            stdscr (curses.window):
-            The main curses window object used for rendering.
+            stdscr (curses.window): The main curses window object.
         """
         stdscr.clear()
 
@@ -121,7 +129,7 @@ class CursesViewer:
                         stdscr.addstr(sy + 1, sx, "│", wall_color)
 
                     # Closure of the outer east edge (only in the last column)
-                    if x == self.maze.config.WIDTH - 1:
+                    if x == self.maze.width - 1:
                         stdscr.addstr(sy, sx + 3,
                                       self._get_pillar_char(x + 1, y),
                                       wall_color)
@@ -129,14 +137,14 @@ class CursesViewer:
                             stdscr.addstr(sy + 1, sx + 3, "│", wall_color)
 
                     # Closing the outer south edge (only in the last row)
-                    if y == self.maze.config.HEIGHT - 1:
+                    if y == self.maze.height - 1:
                         stdscr.addstr(sy + 2, sx,
                                       self._get_pillar_char(x, y + 1),
                                       wall_color)
                         if s:
                             stdscr.addstr(sy + 2, sx + 1, "──", wall_color)
                         # Absolute bottom-right corner
-                        if x == self.maze.config.WIDTH - 1:
+                        if x == self.maze.width - 1:
                             stdscr.addstr(sy + 2, sx + 3,
                                           self._get_pillar_char(x + 1, y + 1),
                                           wall_color)
@@ -145,10 +153,10 @@ class CursesViewer:
                     is_path = (self.show_path and
                                hasattr(self.maze, 'shortest_path_coords')
                                and (x, y) in self.maze.shortest_path_coords)
-                    is_entry = ((hasattr(self.maze.config, 'ENTRY') and
-                                 (x, y) == self.maze.config.ENTRY))
-                    is_exit = ((hasattr(self.maze.config, 'EXIT') and
-                                (x, y) == self.maze.config.EXIT))
+                    is_entry = ((hasattr(self.maze, 'entry') and
+                                 (x, y) == self.maze.entry))
+                    is_exit = ((hasattr(self.maze, 'exit') and
+                                (x, y) == self.maze.exit))
 
                     # fill the hollow interior
                     # of the cell (the 3 central spaces)
@@ -171,7 +179,7 @@ class CursesViewer:
 
         # Menu start coordinates
         # Calculate the first available line below the maze
-        ui_y = (self.maze.config.HEIGHT * 2) + 1
+        ui_y = (self.maze.height * 2) + 1
         path_status = 'Yes' if self.show_path else 'No'
 
         try:
@@ -189,12 +197,10 @@ class CursesViewer:
         stdscr.refresh()
 
     def _interactive_loop(self, stdscr: 'curses.window') -> None:
-        """
-        Executes the main event loop, capturing keystrokes and updating the UI.
+        """Executes the main event loop for keyboard capture and UI updates.
 
         Args:
-            stdscr (curses.window): The main curses window
-            object provided by the wrapper.
+            stdscr (curses.window): The main curses window object.
         """
         # Enable the terminal color engine
         curses.curs_set(0)
@@ -247,10 +253,9 @@ class CursesViewer:
                                   else self.color_idx + 1)
 
     def show(self) -> None:
-        """
-        Starts the curses application safely using the standard wrapper.
+        """Starts the curses application safely using the standard wrapper.
 
-        This ensures the terminal is properly initialized and restored to its
-        original state even if an exception occurs during execution.
+        Ensures the terminal is properly initialized and restored to its
+        original state upon exit or failure.
         """
         curses.wrapper(self._interactive_loop)

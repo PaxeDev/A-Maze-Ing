@@ -1,3 +1,9 @@
+"""
+CLI application entry point for the A-Maze-ing.
+
+Handles argument parsing, validates the configuration using Pydantic,
+and triggers the maze generation algorithms.
+"""
 import sys
 try:
     from config import MazeConfig, MazeConfigError
@@ -10,10 +16,14 @@ except ImportError as e:
 
 
 def main() -> None:
-    """
-    Main entry point for the A-Maze-ing application.
-    Handles CLI arguments, triggers configuration parsing,
-    and starts the maze generation process.
+    """Executes the main CLI workflow.
+
+    Reads the configuration file provided as a CLI argument, validates the
+    data, instantiates the maze generator, and saves the output to disk.
+
+    Raises:
+        SystemExit: If arguments are missing, or if the configuration parsing
+        or execution fails.
     """
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py <config_file.txt>")
@@ -23,10 +33,17 @@ def main() -> None:
 
     try:
         config = MazeConfig.from_file(config_filepath)
-        print("Configuration loaded successfully. "
-              f"Maze size: {config.WIDTH}x{config.HEIGHT}")
-        # 2. Instantiate the generator (Example for the future)
-        # generator = DFSMazeGenerator(config)
+
+        # 2. Instantiate the generator
+        # generator = MazeGenerator(
+        #     width=config.WIDTH,
+        #     height=config.HEIGHT,
+        #     entry_coord=config.ENTRY,
+        #     exit_coord=config.EXIT,
+        #     output_file=config.OUTPUT_FILE,
+        #     perfect=config.PERFECT,
+        #     seed=config.SEED
+        # )
 
         # 3. Generate the maze
         # generator.generate()

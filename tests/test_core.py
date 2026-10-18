@@ -49,7 +49,11 @@ def test_child_generator_grid_initialization() -> None:
     config = MazeConfig.model_validate(raw_data)
 
     # Instantiate the dummy engine
-    engine = DummyMazeEngine(config)
+    engine = DummyMazeEngine(config.WIDTH,
+                             config.HEIGHT,
+                             config.ENTRY,
+                             config.EXIT,
+                             config.OUTPUT_FILE)
 
     # Verify grid dimensions (3 rows, 4 columns)
     assert len(engine.grid) == 3
@@ -90,7 +94,11 @@ def test_export_to_hex_format(tmp_path: Path) -> None:
         def solve(self) -> str:
             return "ES"  # East, South
 
-    maze = DummyMaze(config)
+    maze = DummyMaze(config.WIDTH,
+                     config.HEIGHT,
+                     config.ENTRY,
+                     config.EXIT,
+                     config.OUTPUT_FILE)
     maze.generate()  # Simulate matrix
 
     # Our export meethod
@@ -137,7 +145,11 @@ def test_export_to_hex_dimension_mismatch(tmp_path: Path) -> None:
         def solve(self) -> str:
             return "N"
 
-    maze = CorruptMaze(config)
+    maze = CorruptMaze(config.WIDTH,
+                       config.HEIGHT,
+                       config.ENTRY,
+                       config.EXIT,
+                       config.OUTPUT_FILE)
     maze.generate()
 
     with pytest.raises(ValueError, match="Grid dimensions do not match"):
@@ -166,7 +178,11 @@ def test_export_to_hex_permission_denied(tmp_path: Path) -> None:
         def solve(self) -> str:
             return "N"
 
-    maze = ValidMaze(config)
+    maze = ValidMaze(config.WIDTH,
+                     config.HEIGHT,
+                     config.ENTRY,
+                     config.EXIT,
+                     config.OUTPUT_FILE)
     maze.generate()
 
     with patch("builtins.open", side_effect=PermissionError):

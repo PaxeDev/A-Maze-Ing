@@ -1,18 +1,13 @@
 from typing import cast, Set, Tuple
-from mazegen.viewer import CursesViewer
-from mazegen.core import BaseMazeGenerator
+from viewer import CursesViewer
+from mazegen import MazeGenerator
 
 
-class DummyConfig:
-    HEIGHT = 20
-    WIDTH = 25
-
-    ENTRY = (1, 1)
-    EXIT = (19, 14)
-
-
-class DummyMaze:
-    config = DummyConfig()
+class DummyMaze():
+    width = 25
+    height = 20
+    entry = (1, 1)
+    exit = (19, 14)
     # 10 = Est/West, 15 = All close, 0 = all open, 5 = North/Sud
     # n = bool(cell_value & 1)
     # e = bool(cell_value & 2)
@@ -68,8 +63,8 @@ class DummyMaze:
     #     (0, 6), (0, 5), (0, 4), (0, 3), (0, 2), (0, 2)
     # }
     path_str = "ESEENEEESSSEESESSESESSSSEEEEEESES"
-    shortest_path_coords: Set[Tuple[int, int]] = {config.ENTRY}
-    cx, cy = config.ENTRY
+    shortest_path_coords: Set[Tuple[int, int]] = {entry}
+    cx, cy = entry
     for move in path_str:
         if move == 'N':
             cy -= 1
@@ -83,6 +78,6 @@ class DummyMaze:
 
 
 if __name__ == "__main__":
-    maze = cast(BaseMazeGenerator, DummyMaze())
+    maze = cast(MazeGenerator, DummyMaze())
     viewer = CursesViewer(maze)
     viewer.show()

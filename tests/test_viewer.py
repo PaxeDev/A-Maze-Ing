@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-from mazegen.viewer import CursesViewer
+from viewer import CursesViewer
 from typing import Any
 
 
