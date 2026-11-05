@@ -1,16 +1,23 @@
 [project]
-name = "a-maze-ing"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+name = "mazegen"
+version = "1.0.0"
+description = "Reusable maze generator"
+readme = "mazegen/README.md"
 requires-python = "==3.14.*"
-dependencies = [
-    "pydantic==2.13.*",    
-]
+license = "MIT"
+license-files = ["LICENSE.md"]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
 
 [dependency-groups]
 dev = [
     "flake8==7.4.*",
     "mypy==2.4.*",
+	"pydantic==2.13.*",
     "pytest==9.1.*",
 ]

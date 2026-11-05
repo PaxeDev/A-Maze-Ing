@@ -5,20 +5,21 @@ from pathlib import Path
 
 class MazeConfigError(Exception):
     """Exception raised for errors in the maze configuration process."""
+
     pass
 
 
 class MazeConfig(BaseModel):
-    """Container for the maze configuration parameters using Pydantic.
+    """Container for maze configuration parameters parsed via Pydantic.
 
     Attributes:
         WIDTH (int): Maze width measured in cells.
         HEIGHT (int): Maze height measured in cells.
         ENTRY (tuple[int, int]): (x, y) coordinates of the entry cell.
-        EXIT (tuple[int, int]): (x,y) coordinates of the exit cell.
+        EXIT (tuple[int, int]): (x, y) coordinates of the exit cell.
         OUTPUT_FILE (str): Name of the file where the maze will be exported.
-        PERFECT (bool): If the maze should be perfect (single path, no loops).
-        SEED (int | None): Random seed for maze generation.
+        PERFECT (bool): Whether the maze is perfect (single path, no loops).
+        SEED (int | None): Optional random seed for reproducible generation.
     """
 
     model_config = {"extra": "forbid"}
@@ -32,65 +33,90 @@ class MazeConfig(BaseModel):
 
     @model_validator(mode='after')
     def validate_boundaries(self) -> 'MazeConfig':
-        """
-        Validates that entry and exit coordinates fit within maze dimensions
-        and are not the same cell.
+        """Validates entry and exit placement relative to maze boundaries.
+
+        Ensures that entry and exit coordinates fit within the maze dimensions
+        and do not point to the exact same cell.
+
+        Returns:
+            MazeConfig: The validated configuration instance.
+
+        Raises:
+            ValueError: If entry and exit coordinates are identical or fall
+                outside grid boundaries.
         """
 
         if self.ENTRY == self.EXIT:
             raise ValueError("Entry and exit coordinates "
                              "cannot be the same cell.")
-        for name, coord in [('entry', self.ENTRY), ('exit', self.EXIT)]:
-            x, y = coord
-            if not (0 <= x < self.WIDTH and 0 <= y < self.HEIGHT):
+        for coord_label, coordinate in [('entry', self.ENTRY),
+                                        ('exit', self.EXIT)]:
+            x_coord, y_coord = coordinate
+            if not (0 <= x_coord < self.WIDTH and 0 <= y_coord < self.HEIGHT):
                 raise ValueError(
-                        f"{name} coordinates {coord} are out of bounds "
-                        f"for maze size {self.WIDTH}x{self.HEIGHT}"
-                        )
+                        f"{coord_label} coordinates {coordinate} are out of "
+                        f"bounds for maze size {self.WIDTH}x{self.HEIGHT}")
         return self
 
     @field_validator('ENTRY', 'EXIT', mode='before')
     @classmethod
-    def convert_to_tuple(cls, value: str) -> tuple[int, int]:
-        """Converts a comma-separated string into a tuple of integers."""
+    def convert_to_tuple(cls, raw_value: str) -> tuple[int, int]:
+        """Converts a comma-separated string into a coordinate tuple.
+
+        Args:
+            raw_value (str): Raw string input representing coordinates,
+                e.g., "0,0".
+
+        Returns:
+            tuple[int, int]: A tuple containing the parsed (x, y) integer
+                coordinates.
+
+        Raises:
+            ValueError: If the string cannot be split into exactly two
+                valid integers.
+        """
         try:
-            x, y = value.split(",")
+            raw_x, raw_y = raw_value.split(",")
+            return (int(raw_x.strip()), int(raw_y.strip()))
         except ValueError:
-            raise ValueError("Coordinates must have exactly two "
-                             "values separated by a comma (e.g., '0,1')")
-        return (int(x.strip()), int(y.strip()))
+            raise ValueError("Coordinates must be exactly two integers "
+                             f"separated by a comma (got: '{raw_value}')")
 
     @classmethod
     def from_file(cls, filepath: str) -> 'MazeConfig':
-        """Reads the configuration file and creates a MazeConfig instance.
+        """Reads a text configuration file and instantiates a MazeConfig.
+
+        Parses key-value pairs from the file path, filtering out comments and
+        empty lines, and validates the resulting dictionary using Pydantic.
 
         Args:
-            filepath (str): Path to the configuration file.
+            filepath (str): Path to the configuration text file.
 
         Returns:
-            MazeConfig: Instance with the extracted parameters.
+            MazeConfig: Validated maze configuration instance.
 
         Raises:
-            MazeConfigError: If the file cannot be read or validation fails.
+            MazeConfigError: If the file cannot be read, contains syntax
+                errors, or fails configuration validation.
         """
-        path_obj = Path(filepath)
+        config_path = Path(filepath)
         try:
-            with open(path_obj, 'r', encoding='utf-8') as file:
-                if path_obj.suffix != '.txt':
-                    raise MazeConfigError(f"Invalid file: '{path_obj}'. "
+            with open(config_path, 'r', encoding='utf-8') as file:
+                if config_path.suffix != '.txt':
+                    raise MazeConfigError(f"Invalid file: '{config_path}'. "
                                           "Must be a valid <filename>.txt")
                 lines = file.readlines()
         except FileNotFoundError:
             raise MazeConfigError("Configuration file "
-                                  f"not found: '{path_obj}'.")
+                                  f"not found: '{config_path}'.")
         except PermissionError:
             raise MazeConfigError("Permissions denied "
-                                  f"to read file: '{path_obj}'.")
+                                  f"to read file: '{config_path}'.")
         except UnicodeDecodeError:
-            raise MazeConfigError(f"File '{path_obj}' is not "
+            raise MazeConfigError(f"File '{config_path}' is not "
                                   "a valid UTF-8 text file.")
 
-        raw_data = {}
+        raw_config_data: dict[str, str] = {}
         for line in lines:
             clean_line = line.split('#')[0].strip()
             if not clean_line or clean_line.startswith('#'):
@@ -98,9 +124,29 @@ class MazeConfig(BaseModel):
             if '=' not in clean_line:
                 raise MazeConfigError("Bad syntax in config file "
                                       f"(missing '='): '{clean_line}'")
-            key, value = clean_line.split('=', 1)
-            raw_data[key.strip().upper()] = value.strip()
+            config_key, config_value = clean_line.split('=', 1)
+            raw_config_data[config_key.strip().upper()] = config_value.strip()
         try:
-            return cls.model_validate(raw_data)
-        except ValidationError as e:
-            raise MazeConfigError(f"Invalid configuration data:\n{e}")
+            return cls.model_validate(raw_config_data)
+        except ValidationError as validation_error:
+            clean_errors: list[str] = []
+            for error_detail in validation_error.errors():
+                location_parts = [
+                    str(location)
+                    for location in error_detail["loc"]
+                    if location != "__root__"]
+
+                field_name = " -> ".join(location_parts)
+
+                error_message = str(error_detail["msg"])
+                if error_message.startswith("Value error, "):
+                    error_message = error_message[len("Value error, "):]
+
+                if field_name:
+                    clean_errors.append(f"  - {field_name}: {error_message}")
+                else:
+                    clean_errors.append(f"  - {error_message}")
+
+            formatted_summary = "\n".join(clean_errors)
+            raise MazeConfigError("Invalid configuration "
+                                  f"data:\n{formatted_summary}")

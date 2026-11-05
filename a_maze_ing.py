@@ -7,6 +7,8 @@ and triggers the maze generation algorithms.
 import sys
 try:
     from config import MazeConfig, MazeConfigError
+    from mazegen import MazeGenerator
+    from viewer import CursesViewer
 except ImportError as e:
     print(f"Environment Error: Missing dependency '{e.name}'.")
     print("Please ensure you are running the script inside the virtual"
@@ -34,34 +36,38 @@ def main() -> None:
     try:
         config = MazeConfig.from_file(config_filepath)
 
-        # 2. Instantiate the generator
-        # generator = MazeGenerator(
-        #     width=config.WIDTH,
-        #     height=config.HEIGHT,
-        #     entry_coord=config.ENTRY,
-        #     exit_coord=config.EXIT,
-        #     output_file=config.OUTPUT_FILE,
-        #     perfect=config.PERFECT,
-        #     seed=config.SEED
-        # )
+        # Instantiate the generator
+        generator = MazeGenerator(
+            width=config.WIDTH,
+            height=config.HEIGHT,
+            entry_coord=config.ENTRY,
+            exit_coord=config.EXIT,
+            output_file=config.OUTPUT_FILE,
+            perfect=config.PERFECT,
+            seed=config.SEED
+        )
 
-        # 3. Generate the maze
-        # generator.generate()
+        # Generate the maze
+        generator.generate()
 
-        # 4. Save the output directly to disk
-        # generator.export_to_hex()
-        print(f"Maze successfully saved to '{config.OUTPUT_FILE}'.")
+        if config.WIDTH > 50 or config.HEIGHT > 50:
+            print("Maze is too large to show in the terminal, "
+                  f"check {config.OUTPUT_FILE}")
+        else:
+            # Launch the interactive terminal visualization
+            viewer = CursesViewer(generator)
+            viewer.show()
 
     except MazeConfigError as error:
         # Catch and display our custom parsing errors cleanly
         print(f"Error: {error}", file=sys.stderr)
-        sys.exit(1)
+        return
     except (ValueError, OSError) as operational_error:
         print(f"Execution Error: {operational_error}", file=sys.stderr)
-        sys.exit(1)
+        return
     except Exception as unexpected_error:
         print(f"Unexpected error occurred: {unexpected_error}")
-        sys.exit(1)
+        return
 
 
 if __name__ == "__main__":

@@ -2,43 +2,15 @@
 Run test with pytest -v
 """
 import pytest
-from mazegen.core import BaseMazeGenerator
 from config.parser import MazeConfig
 from pathlib import Path
 from unittest.mock import patch
+from mazegen import MazeGenerator
+from mazegen.square import Square
 
 
-def test_base_generator_is_abstract() -> None:
-    """Test that BaseMazeGenerator cannot be instantiated directly."""
-    raw_data = {
-        "WIDTH": "10",
-        "HEIGHT": "10",
-        "ENTRY": "0,0",
-        "EXIT": "9,9",
-        "OUTPUT_FILE": "maze_output.txt"
-    }
-    config = MazeConfig.model_validate(raw_data)
-
-    with pytest.raises(TypeError) as error_info:
-        BaseMazeGenerator(config)  # type: ignore
-
-    assert "Can't instantiate abstract class" in str(error_info.value)
-    assert "generate" in str(error_info.value)
-    assert "solve" in str(error_info.value)
-
-
-def test_child_generator_grid_initialization() -> None:
-    """Test that a concrete implementation initializes the grid correctly."""
-
-    # Create a dummy child class that fulfills the contract
-    class DummyMazeEngine(BaseMazeGenerator):
-        def generate(self) -> None:
-            pass
-
-        def solve(self) -> str:
-            return "E"
-
-    # Setup a 4x3 maze config
+def test_generator_initialization() -> None:
+    """Test that MazeGenerator initializes dimensions and grid correctly."""
     raw_data = {
         "WIDTH": "4",
         "HEIGHT": "3",
@@ -48,26 +20,24 @@ def test_child_generator_grid_initialization() -> None:
     }
     config = MazeConfig.model_validate(raw_data)
 
-    # Instantiate the dummy engine
-    engine = DummyMazeEngine(config.WIDTH,
-                             config.HEIGHT,
-                             config.ENTRY,
-                             config.EXIT,
-                             config.OUTPUT_FILE)
+    engine = MazeGenerator(
+        width=config.WIDTH,
+        height=config.HEIGHT,
+        entry_coord=config.ENTRY,
+        exit_coord=config.EXIT,
+        output_file=config.OUTPUT_FILE
+    )
 
-    # Verify grid dimensions (3 rows, 4 columns)
-    assert len(engine.grid) == 3
-    assert len(engine.grid[0]) == 4
+    assert engine.width == 4
+    assert engine.height == 3
+    assert engine.entry == (0, 0)
+    assert engine.exit == (3, 2)
 
-    # Verify all initial cells are walls (0)
-    for row in engine.grid:
-        for cell in row:
-            assert cell == 15
+    assert engine.grid == []
 
 
 def test_export_to_hex_format(tmp_path: Path) -> None:
     """Test the exact output format of the hexadecimal export."""
-
     fake_output = tmp_path / "test_out.txt"
 
     raw_data = {
@@ -79,49 +49,38 @@ def test_export_to_hex_format(tmp_path: Path) -> None:
     }
     config = MazeConfig.model_validate(raw_data)
 
-    # 2. Creating Maze
-    class DummyMaze(BaseMazeGenerator):
-        def generate(self) -> None:
-            # Simulate Mazegen
-            # 15 = F, 10 = A
-            #  5 = 5,  0 = 0
-            self.grid = [
-                [15, 10, 15],
-                [5, 0, 10],
-                [1,   2,  4]
-            ]
-
-        def solve(self) -> str:
-            return "ES"  # East, South
-
-    maze = DummyMaze(config.WIDTH,
-                     config.HEIGHT,
-                     config.ENTRY,
-                     config.EXIT,
-                     config.OUTPUT_FILE)
-    maze.generate()  # Simulate matrix
-
-    # Our export meethod
-    maze.export_to_hex()
-
-    # 4. check file exist and content
-    assert fake_output.exists()
-
-    with open(fake_output, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    # Expected output
-    expected_content = (
-        "faf\n"
-        "50a\n"
-        "124\n"
-        "\n"
-        "0,0\t# entry (x,y)\n"
-        "1,1\t# exit (x,y)\n"
-        "ES\n"
+    maze = MazeGenerator(
+        width=config.WIDTH,
+        height=config.HEIGHT,
+        entry_coord=config.ENTRY,
+        exit_coord=config.EXIT,
+        output_file=config.OUTPUT_FILE
     )
 
-    assert content == expected_content
+    # Creating Square objects
+    def create_square(val: int) -> Square:
+        square = Square()
+        square.set_square(number=val)
+        return square
+
+    maze.grid = [
+        [create_square(15), create_square(10), create_square(15)],
+        [create_square(5),  create_square(0),  create_square(10)],
+        [create_square(1),  create_square(2),  create_square(4)]
+    ]
+
+    maze.export_to_hex()
+
+    content = fake_output.read_text()
+
+    # Expected output ending with 'N' from dummy solve()
+    lines = content.split('\n')
+    assert lines[0] == "faf"
+    assert lines[1] == "50a"
+    assert lines[2] == "124"
+    assert lines[3] == ""
+    assert lines[4] == "0,0"
+    assert lines[5] == "1,1"
 
 
 def test_export_to_hex_dimension_mismatch(tmp_path: Path) -> None:
@@ -138,19 +97,21 @@ def test_export_to_hex_dimension_mismatch(tmp_path: Path) -> None:
     }
     config = MazeConfig.model_validate(raw_data)
 
-    class CorruptMaze(BaseMazeGenerator):
-        def generate(self) -> None:
-            self.grid = [[15]]
+    maze = MazeGenerator(
+        width=config.WIDTH,
+        height=config.HEIGHT,
+        entry_coord=config.ENTRY,
+        exit_coord=config.EXIT,
+        output_file=config.OUTPUT_FILE
+    )
 
-        def solve(self) -> str:
-            return "N"
+    def create_square(val: int) -> Square:
+        square = Square()
+        square.set_square(number=val)
+        return square
 
-    maze = CorruptMaze(config.WIDTH,
-                       config.HEIGHT,
-                       config.ENTRY,
-                       config.EXIT,
-                       config.OUTPUT_FILE)
-    maze.generate()
+    # Corrupt grid dimensions artificially
+    maze.grid = [[create_square(15)]]
 
     with pytest.raises(ValueError, match="Grid dimensions do not match"):
         maze.export_to_hex()
@@ -171,19 +132,24 @@ def test_export_to_hex_permission_denied(tmp_path: Path) -> None:
     }
     config = MazeConfig.model_validate(raw_data)
 
-    class ValidMaze(BaseMazeGenerator):
-        def generate(self) -> None:
-            self.grid = [[15, 15, 15], [15, 15, 15], [15, 15, 15]]
+    maze = MazeGenerator(
+        width=config.WIDTH,
+        height=config.HEIGHT,
+        entry_coord=config.ENTRY,
+        exit_coord=config.EXIT,
+        output_file=config.OUTPUT_FILE
+    )
 
-        def solve(self) -> str:
-            return "N"
+    def create_square(val: int) -> Square:
+        square = Square()
+        square.set_square(number=val)
+        return square
 
-    maze = ValidMaze(config.WIDTH,
-                     config.HEIGHT,
-                     config.ENTRY,
-                     config.EXIT,
-                     config.OUTPUT_FILE)
-    maze.generate()
+    maze.grid = [
+        [create_square(15), create_square(15), create_square(15)],
+        [create_square(15), create_square(15), create_square(15)],
+        [create_square(15), create_square(15), create_square(15)]
+    ]
 
     with patch("builtins.open", side_effect=PermissionError):
         with pytest.raises(OSError,

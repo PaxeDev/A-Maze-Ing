@@ -3,7 +3,22 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from viewer import CursesViewer
-from typing import Any
+from typing import Any, Set, Tuple
+
+
+def create_mock_square(number_val: int) -> MagicMock:
+    """Helper to create a Mock object mimicking the Square structure."""
+    mock_square = MagicMock()
+
+    def mock_get_info(key: str) -> Any:
+        if key == "number":
+            return number_val
+        if key == "breakable":
+            return True
+        return None
+
+    mock_square.get_info.side_effect = mock_get_info
+    return mock_square
 
 
 # Environment Setup (Fixture)
@@ -13,14 +28,18 @@ def dummy_maze() -> Any:
     Generate a basic simulated maze
     so that the viewer has data to read.
     """
-    class DummyConfig:
-        HEIGHT = 2
-        WIDTH = 2
-
     class DummyMaze:
-        config = DummyConfig()
+        width: int = 2
+        height: int = 2
+        entry: Tuple[int, int] = (0, 0)
+        exit: Tuple[int, int] = (1, 1)
+        pattern_42: Set[Tuple[int, int]] = set()
+        shortest_path_coords: Set[Tuple[int, int]] = set()
         # 10 = East/West (1010), 15 = All (1111), 0 = None (0000)
-        grid = [[10, 15], [0, 5]]
+        grid: list[list[int]] = [[create_mock_square(10),
+                                  create_mock_square(15)],
+                                 [create_mock_square(0),
+                                  create_mock_square(5)]]
 
     return DummyMaze()
 

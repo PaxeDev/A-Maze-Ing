@@ -89,7 +89,7 @@ def test_invalid_coordinate_format() -> None:
     with pytest.raises(ValidationError) as error_info:
         MazeConfig.model_validate(raw_data)
 
-    assert "exactly two values separated by a comma" in str(error_info.value)
+    assert "exactly two integers" in str(error_info.value)
 
 
 def test_missing_mandatory_data() -> None:
@@ -124,7 +124,7 @@ def test_coordinates_too_many_commas() -> None:
     with pytest.raises(ValidationError) as error_info:
         MazeConfig.model_validate(raw_data)
 
-    assert "exactly two values separated by a comma" in str(error_info.value)
+    assert "exactly two integers" in str(error_info.value)
 
 
 def test_forbidden_extra_keys() -> None:
@@ -307,3 +307,82 @@ def test_perfect_default_is_false() -> None:
 
     assert config.PERFECT is False
     assert type(config.PERFECT) is bool
+
+
+def test_coordinates_non_integer() -> None:
+    """Test that fails if coordinates contain letters instead of numbers."""
+    raw_data = {
+        "WIDTH": "10",
+        "HEIGHT": "10",
+        "ENTRY": "A,1",
+        "EXIT": "9,9",
+        "OUTPUT_FILE": "maze.txt"
+    }
+    with pytest.raises(ValidationError) as error_info:
+        MazeConfig.model_validate(raw_data)
+    assert "exactly two integers" in str(error_info.value)
+
+
+def test_dimensions_too_large() -> None:
+    """Test that fails if the maze dimensions exceed the maximum limit."""
+    raw_data = {
+        "WIDTH": "1001",
+        "HEIGHT": "10",
+        "ENTRY": "0,0",
+        "EXIT": "9,9",
+        "OUTPUT_FILE": "maze.txt"
+    }
+
+    with pytest.raises(ValidationError) as error_info:
+        MazeConfig.model_validate(raw_data)
+
+    assert "less than or equal to 1000" in str(error_info.value)
+
+
+def test_from_file_invalid_extension(tmp_path: Path) -> None:
+    """Test that fails if the config file does not end with .txt."""
+    config_file = tmp_path / "config.csv"
+    config_file.write_text(
+        "WIDTH=10\nHEIGHT=10\nENTRY=0,0\nEXIT=9,9\nOUTPUT_FILE=maze.txt\n",
+        encoding="utf-8"
+    )
+
+    with pytest.raises(MazeConfigError) as error_info:
+        MazeConfig.from_file(str(config_file))
+
+    assert "Must be a valid <filename>.txt" in str(error_info.value)
+
+
+def test_from_file_inline_comments(tmp_path: Path) -> None:
+    """Test that parser correctly strips inline comments from values."""
+    config_file = tmp_path / "inline_config.txt"
+    config_file.write_text(
+        "WIDTH=15 # This is the width\n"
+        "HEIGHT=10      # Height goes here\n"
+        "ENTRY=0,0\n"
+        "EXIT=14,9\n"
+        "OUTPUT_FILE=maze.txt\n",
+        encoding="utf-8"
+    )
+
+    config = MazeConfig.from_file(str(config_file))
+
+    assert config.WIDTH == 15
+    assert config.HEIGHT == 10
+
+
+def test_invalid_boolean_perfect() -> None:
+    """Test that fails if PERFECT is given a non-boolean string."""
+    raw_data = {
+        "WIDTH": "10",
+        "HEIGHT": "10",
+        "ENTRY": "0,0",
+        "EXIT": "9,9",
+        "OUTPUT_FILE": "maze.txt",
+        "PERFECT": "maybe"
+    }
+
+    with pytest.raises(ValidationError) as error_info:
+        MazeConfig.model_validate(raw_data)
+
+    assert "Input should be a valid boolean" in str(error_info.value)

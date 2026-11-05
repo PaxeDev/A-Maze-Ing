@@ -9,13 +9,13 @@ The resulting structure is processed in two ways:
 2. Visually rendered in the terminal using an interactive `curses`-based interface with dynamic Unicode box-drawing characters and customizable color layers.
 
 ## Instructions
-This project uses `uv` for lightning-fast dependency and virtual environment management.
+This project uses `uv` for dependency and virtual environment management.
 
 **Installation**
 ```bash
 make install
 ```
-*This command automatically creates the Python 3.14 virtual environment and installs all dependencies (like `pydantic` and `pytest`) defined in the `uv.lock` file.*
+*This command automatically creates the Python 3.14.* virtual environment and installs all dependencies (like `pydantic` and `pytest`) defined in the `uv.lock` file.*
 
 **Execution**
 
@@ -23,14 +23,13 @@ To ensure safe processing, the application strictly requires the configuration f
 
 *Method 1: Automated (Recommended)*
 ```bash
-make run
+make
 ```
-*By default, this will execute the generator using the provided `config.txt` you can change the name in the Makefile `CONFIG = <your_filename>.txt`, inside the isolated `uv` environment.*
+*By default, this will execute the generator using the provided `config.txt` you can change the name in the Makefile `CONFIG=<your_filename>.txt`, inside the isolated `uv` environment.*
 
 *Method 2: Manual*
 ```bash
-source .venv/bin/activate
-python3 a_maze_ing.py <your_filename>.txt
+uv run a_maze_ing.py <your_config_file>.txt
 ```
 
 **Interactive Viewer Controls**
@@ -38,7 +37,7 @@ python3 a_maze_ing.py <your_filename>.txt
 Once the application is running, you can interact with the live maze visualization using the following keys:
 * `[H]` - Toggle visibility of the shortest solution path.
 * `[C]` - Cycle through different color palettes for the maze walls (White, Matrix Green, Neon Cyan).
-* `[R]` - Regenerate a new maze dynamically (Work in Progress).
+* `[R]` - Regenerate a new maze dynamically.
 * `[Q]` - Quit the application and restore the terminal.
 
 **Development & Quality**
@@ -62,7 +61,7 @@ The program is controlled via a plain text configuration file utilizing a `KEY=V
 | `SEED` | To replicate the maze (optional) | `Seed=int` |
 
 ## Architecture & Reusability
-The project is strictly separated into two components to ensure external reusability:
+The project is separated into two components to ensure external reusability:
 1. **CLI & UI (`a_maze_ing.py`, `viewer.py`):** Handles argument parsing, configuration validation, and interactive terminal rendering.
 2. **Core Engine (`mazegen/`):** A standalone, pure-logic module containing the maze generation algorithms. This module contains no UI logic and is designed to be packaged as a `.whl` or `.tar.gz` file for easy installation in future projects.
 
@@ -118,22 +117,23 @@ maze.export_to_hex()
 ```
 
 ## Algorithm Overview
-*TODO: Detail the maze generation algorithm chosen (e.g., Depth-First Search, Prim's) and explain the reasoning behind this technical choice once the `MazeGenerator` implementation is complete.*
+For the maze creation algorithm we chose to implement Depth-First Search algorithm.
+The reasonign behind this choice was mainly because we could use the the same algorithm for both creating the initial perfect maze (only one valid way from starting point to end point) as well as the braiding itself (additionally breaking down walls to create a more pacman-esque board where the player doesnt get stuck if tehy choose to go down a dead end).
 
 ## Team & Project Management
 ### Team Roles
 
-- **olpachec (Software Architecture & UI):** Responsible for the abstract base engine (`BaseMazeGenerator`), strict configuration parsing (`Pydantic`), environment setup (`uv`, Makefile), testing suite, and the interactive terminal rendering engine (`CursesViewer`).
-- **dpleschu (Algorithmic Engineering):** Responsible for implementing the core generation and solving logic within the concrete `MazeGenerator` class.
+- **olpachec (Software Architecture & UI):** Responsible for strict configuration parsing (`Pydantic`), environment setup (`uv`, Makefile), testing suite, and the interactive terminal rendering engine (`CursesViewer`) and solving logic.
+- **dpleschu (Algorithmic Engineering):** Responsible for implementing the core generation within the concrete `MazeGenerator` class.
 
 ### Anticipated Planning & Evolution
-Our initial plan was to build and manage the project using standard Python virtual environments (`venv`). However, during the early research phase, we discovered `uv`. We adapted our plan to adopt `uv` because it provided lightning-fast dependency management and significantly simplified the architecture needed to eventually export our `mazegen` directory as a standalone, reusable package.
+Our initial plan was to build and manage the project using standard Python virtual environments (`venv`). However, during the early research phase, we discovered `uv`. We adapted our plan to adopt `uv` because it provided dependency management and significantly simplified the architecture needed to eventually export our `mazegen` directory as a standalone, reusable package.
 
 ### What Worked Well & What Could Be Improved
 - **What worked well:** 
   - **Test-First Approach:** Writing unit tests even before writing the logic helped us understand the exact architectural structure required and anticipate edge cases, especially when implementing the `Pydantic` data validators.
-  - **Git Branching Strategy:** Since we worked asynchronously, utilizing strict feature branches and Merge Requests was incredibly useful. It allowed us to review the project piece by piece, making it much easier to understand how the codebase was evolving compared to reviewing a massive single merge.
-- **What could be improved:** While asynchronous work was highly effective, scheduling brief live syncs before defining complex architectural contracts (like the `BaseMazeGenerator` properties) could further reduce the back-and-forth during code reviews.
+  - **Git Branching Strategy:** Since we worked on independent, utilizing strict feature branches and merge requests provided great learnings. It allowed us to review the project piece by piece, making it much easier to understand how the codebase was evolving compared to reviewing a massive single merge.
+- **What could be improved:** While independent work was highly effective, scheduling regular briefs before defining complex architectural structures (like the Square class) could further reduce the back-and-forth during code reviews.
 
 ### Technical Tooling
 This project enforces strict software engineering practices using specific tools:
@@ -145,7 +145,7 @@ This project enforces strict software engineering practices using specific tools
 * **Terminal UI:** Utilizes curses for interactive UI rendering without heavy external graphical libraries.
 
 ## Resources
-* **AI Usage:** AI was utilized to configure the `uv` environment, establish CI/CD workflows, and draft some unit tests and README.
+* **AI Usage:** AI was utilized to configure the `uv` environment, establish CI/CD workflows, and draft some unit tests.
 * https://opensource.guide/legal/#which-open-source-license-is-appropriate-for-my-project
 
 * https://peps.python.org/pep-0257/
@@ -156,4 +156,4 @@ This project enforces strict software engineering practices using specific tools
 
 * https://docs.python.org/3/library/curses.html
 
-*(Add other tutorials, articles, or documentation links here as the project evolves)*
+* https://www.youtube.com/watch?v=uctN47p_KVk "What School Didn't Tell You About Mazes" by mattbatwings for a very nice overview of different maze creation algorithms.
