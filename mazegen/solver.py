@@ -67,22 +67,18 @@ class AStarSolver:
                 - Directional movement string (e.g., "EESSNW").
                 - Set of (x, y) coordinates representing the solution path.
         """
-        # Priority queue storing nodes to evaluate: (f_score, pos_x, pos_y)
         open_set: List[Tuple[int, int, int]] = []
         initial_f_score = cls._manhattan_distance(entry, exit_coord)
         heapq.heappush(open_set, (initial_f_score, entry[0], entry[1]))
 
-        # Exact cost from entry coordinate to each evaluated point
         g_cost: Dict[Tuple[int, int], int] = {entry: 0}
 
-        # Maps child_coord -> (parent_coord, move_direction)
         came_from: Dict[Tuple[int, int], Tuple[Tuple[int, int], str]] = {}
 
         while open_set:
             _, current_x, current_y = heapq.heappop(open_set)
             current_coord = (current_x, current_y)
 
-            # Reconstruct route if destination is reached
             if current_coord == exit_coord:
                 return cls._reconstruct_path(came_from, current_coord)
 
@@ -97,16 +93,12 @@ class AStarSolver:
                 wall_mask,
                 direction_char,
             ) in cls.DIRECTIONS:
-                # 3. Skip direction if a wall
-                # blocks the path in the current cell
                 if (cell_val & wall_mask) != 0:
                     continue
 
-                # Calculate neighbor coordinates
                 neighbor_x = current_x + delta_x
                 neighbor_y = current_y + delta_y
 
-                # Ensure neighbor is within grid bounds
                 if 0 <= neighbor_x < width and 0 <= neighbor_y < height:
                     neighbor_coord = (neighbor_x, neighbor_y)
                     tentative_g_cost = g_cost[current_coord] + 1

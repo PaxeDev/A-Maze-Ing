@@ -58,7 +58,7 @@ The program is controlled via a plain text configuration file utilizing a `KEY=V
 | `EXIT` | Exit coordinates (x,y) | `EXIT=19,14` |
 | `OUTPUT_FILE` | Output filename | `OUTPUT_FILE=maze.txt` |
 | `PERFECT` | Is the maze perfect? (True/False) | `PERFECT=True` |
-| `SEED` | To replicate the maze (optional) | `Seed=int` |
+| `SEED` | To replicate the maze (optional) | `Seed=42` |
 
 ## Architecture & Reusability
 The project is separated into two components to ensure external reusability:
@@ -103,7 +103,7 @@ custom_maze.generate()
 ```
 **3. Access the generated structure and solution**
 ```python
-# Access the 2D grid structure (List[List[int]] using bitwise walls)
+# Access the 2D grid structure (List[List[Square]] containing Square objects)
 grid_structure = maze.grid
 
 # Get the directional string solution (e.g., "EESSWW")
@@ -117,13 +117,20 @@ maze.export_to_hex()
 ```
 
 ## Algorithm Overview
-For the maze creation algorithm we chose to implement Depth-First Search algorithm.
-The reasonign behind this choice was mainly because we could use the the same algorithm for both creating the initial perfect maze (only one valid way from starting point to end point) as well as the braiding itself (additionally breaking down walls to create a more pacman-esque board where the player doesnt get stuck if tehy choose to go down a dead end).
+### Maze Generation & Braiding
+We chose to implement a `Depth-First Search` algorithm. The reasoning behind this choice was mainly because we could use the the same algorithm for both creating the initial perfect maze (only one valid way from starting point to end point) as well as the braiding itself (additionally breaking down walls to create a more pacman-esque board where the player doesnt get stuck if they choose to go down a dead end).
+
+### Pathfinding & Solving
+To find the shortest path between `ENTRY` and `EXIT`, we implemented the `A* (A-Star)` pathfinding algorithm (`mazegen/solver.py`).
+
+- Min-Heap Priority Queue (heapq): extracts the most promising candidate cell.
+- Manhattan Distance Heuristic: Calculates the estimated remaining steps on a 2D orthogonal grid.
+- Bitwise Wall: Evaluates cell passage directly on 4-bit wall masks.
 
 ## Team & Project Management
 ### Team Roles
 
-- **olpachec (Software Architecture & UI):** Responsible for strict configuration parsing (`Pydantic`), environment setup (`uv`, Makefile), testing suite, and the interactive terminal rendering engine (`CursesViewer`) and solving logic.
+- **olpachec (Software Architecture & UI):** Responsible for strict configuration parsing (`Pydantic`), environment setup (`uv`, Makefile), testing suite, and the interactive terminal rendering engine (`CursesViewer`) and solving logic (`AStarSolver`).
 - **dpleschu (Algorithmic Engineering):** Responsible for implementing the core generation within the concrete `MazeGenerator` class.
 
 ### Anticipated Planning & Evolution
@@ -138,7 +145,7 @@ Our initial plan was to build and manage the project using standard Python virtu
 ### Technical Tooling
 This project enforces strict software engineering practices using specific tools:
 
-* **Separation of Concerns:** The maze logic (`mazegen/core.py`) is completely decoupled from the visualization layer (`viewer.py` at the project root), ensuring scalability and testability.
+* **Separation of Concerns:** The maze logic (`mazegen/maze_generator.py` & `mazegen/grid.py`) is completely decoupled from the visualization layer (`viewer.py` at the project root), ensuring scalability and testability.
 * **Strict Typing:** Configured with `mypy` strict mode and `pyright` to catch type-related bugs at compile time. Data validation is rigidly handled by Pydantic.
 * **Environment Isolation:** Managed entirely via `uv` to guarantee reproducible dependencies across all developer machines.
 * **Testing:** Comprehensive test suite utilizing `pytest` and `unittest.mock` to simulate real-time curses terminal interactions without requiring an active display.

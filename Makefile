@@ -33,9 +33,6 @@ lint-strict:
 	$(UV) flake8 --exclude=$(VENV) .
 	$(UV) mypy --exclude $(VENV) . --strict
 
-test:
-	$(UV) pytest -v
-
 fclean: clean
 	rm -rf $(VENV)
 	rm -f uv.lock

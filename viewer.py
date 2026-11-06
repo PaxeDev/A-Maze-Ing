@@ -23,13 +23,11 @@ class CursesViewer:
         COLOR_EXIT (int): Color pair ID for the exit cell background.
     """
 
-    # Directional Bitmask Constants
     WALL_N = 1
     WALL_E = 2
     WALL_S = 4
     WALL_W = 8
 
-    # Color Pairs IDs
     COLOR_PATTERN = 1
     COLOR_PATH = 2
     COLOR_WALL_1 = 3
@@ -80,51 +78,38 @@ class CursesViewer:
 
         up = down = left = right = False
 
-        # Check for a wall going UP from this pillar
         if pillar_y > 0:
             if pillar_x < width:
-                # West wall of cell above
                 up = bool(self._get_cell_val(pillar_x,
                                              pillar_y - 1) & self.WALL_W)
             else:
-                # E.wall cell left-above
                 up = bool(self._get_cell_val(pillar_x - 1,
                                              pillar_y - 1) & self.WALL_E)
 
-        # Check for a wall going DOWN from this pillar
         if pillar_y < height:
             if pillar_x < width:
-                # West wall of current cell
                 down = bool(self._get_cell_val(pillar_x,
                                                pillar_y) & self.WALL_W)
             else:
-                # East wall of cell left
                 down = bool(self._get_cell_val(pillar_x - 1,
                                                pillar_y) & self.WALL_E)
 
-        # Check for a wall going LEFT from this pillar
         if pillar_x > 0:
             if pillar_y < height:
-                # North wall of cell left
                 left = bool(self._get_cell_val(pillar_x - 1,
                                                pillar_y) & self.WALL_N)
             else:
-                # S.wall cell left-above
                 left = bool(self._get_cell_val(pillar_x - 1,
                                                pillar_y - 1) & self.WALL_S)
 
-        # Check for a wall going RIGHT from this pillar
         if pillar_x < width:
             if pillar_y < height:
-                # North wall of current cell
                 right = bool(self._get_cell_val(pillar_x,
                                                 pillar_y) & self.WALL_N)
             else:
-                # South wall of cell above
                 right = bool(self._get_cell_val(pillar_x,
                                                 pillar_y - 1) & self.WALL_S)
 
-        # Map the 4 boolean directions to an integer index (0-15)
         idx = ((1 if up else 0) + (2 if right else 0) +
                (4 if down else 0) + (8 if left else 0))
 
@@ -142,7 +127,6 @@ class CursesViewer:
         """
         stdscr.clear()
 
-        # Draw the expanded maze (scale: 2 rows x 4 columns per cell)
         for y, row in enumerate(self.maze.grid):
             for x, square_obj in enumerate(row):
                 screen_y = y * 2
@@ -155,9 +139,7 @@ class CursesViewer:
                 has_west = bool(cell_val & self.WALL_W)
 
                 try:
-                    # Get the currently selected color for the walls
                     wall_color = curses.color_pair(self.color_idx)
-                    # Draw the all pillars acording the square object
                     stdscr.addstr(screen_y, screen_x,
                                   self._get_pillar_char(x, y),
                                   wall_color)
@@ -170,7 +152,6 @@ class CursesViewer:
                     stdscr.addstr(screen_y + 2, screen_x + 4,
                                   self._get_pillar_char(x + 1, y + 1),
                                   wall_color)
-                    # Draw all the walls of the square
                     if has_north:
                         stdscr.addstr(screen_y, screen_x + 1, "───",
                                       wall_color)
@@ -189,10 +170,6 @@ class CursesViewer:
                     is_entry = ((x, y) == self.maze.entry)
                     is_exit = ((x, y) == self.maze.exit)
 
-                    # fill the hollow interior
-                    # of the cell (the 3 central spaces)
-                    # using a pair of colors
-                    # (black text on a gold background)
                     if is_entry:
                         stdscr.addstr(screen_y + 1, screen_x + 1, "   ",
                                       curses.color_pair(self.COLOR_ENTRY))
@@ -208,17 +185,12 @@ class CursesViewer:
                 except curses.error:
                     pass
 
-        # Menu start coordinates
-        # Calculate the first available line below the maze
         ui_y = (self.maze.height * 2) + 1
         path_status = 'Yes' if self.show_path else 'No'
 
         try:
             stdscr.addstr(ui_y, 0, "=== CONTROLS ===", curses.A_BOLD)
-            # Line 1: Current status
             stdscr.addstr(ui_y + 1, 0, f"Path visible: {path_status}")
-
-            # Line 2: Controls in horizontal format to save vertical space
             stdscr.addstr(ui_y + 2, 0,
                           "Controls: [R]egenerate  "
                           "|  [H]ide Path  |  [C]olor  |  [Q]uit")
@@ -233,39 +205,29 @@ class CursesViewer:
         Args:
             stdscr (curses.window): The main curses window object.
         """
-        # Enable the terminal color engine
         curses.curs_set(0)
         stdscr.nodelay(False)
 
-        # 2. Register color pairs (ID, Foreground, Background)
-        # Pattern 42: Black text on a yellow (gold) background
         curses.start_color()
         curses.use_default_colors()
         curses.init_pair(self.COLOR_PATTERN,
                          curses.COLOR_BLACK,
                          curses.COLOR_YELLOW)
 
-        # Solution path: White text on a blue background
         curses.init_pair(self.COLOR_PATH,
                          curses.COLOR_WHITE,
                          curses.COLOR_BLUE)
 
-        # Input: White text on a magenta (pink) background
         curses.init_pair(self.COLOR_ENTRY,
                          curses.COLOR_WHITE,
                          curses.COLOR_MAGENTA)
 
-        # Output: White text on a red background
         curses.init_pair(self.COLOR_EXIT,
                          curses.COLOR_WHITE,
                          curses.COLOR_RED)
 
-        # Rotating wall paddle (C key)
-        # White on a transparent background
         curses.init_pair(self.COLOR_WALL_1, curses.COLOR_WHITE, -1)
-        # Green Matrix
         curses.init_pair(self.COLOR_WALL_2, curses.COLOR_GREEN, -1)
-        # Neon Cyan
         curses.init_pair(self.COLOR_WALL_3, curses.COLOR_CYAN, -1)
 
         while True:

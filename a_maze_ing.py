@@ -36,7 +36,6 @@ def main() -> None:
     try:
         config = MazeConfig.from_file(config_filepath)
 
-        # Instantiate the generator
         generator = MazeGenerator(
             width=config.WIDTH,
             height=config.HEIGHT,
@@ -47,19 +46,16 @@ def main() -> None:
             seed=config.SEED
         )
 
-        # Generate the maze
         generator.generate()
 
         if config.WIDTH > 50 or config.HEIGHT > 50:
             print("Maze is too large to show in the terminal, "
                   f"check {config.OUTPUT_FILE}")
         else:
-            # Launch the interactive terminal visualization
             viewer = CursesViewer(generator)
             viewer.show()
 
     except MazeConfigError as error:
-        # Catch and display our custom parsing errors cleanly
         print(f"Error: {error}", file=sys.stderr)
         return
     except (ValueError, OSError) as operational_error:
